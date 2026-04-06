@@ -589,6 +589,9 @@ export default function TradesPage() {
         <DialogContent className="sm:max-w-[360px] bg-card border-border">
           <DialogHeader>
             <DialogTitle className="text-sm font-semibold">Close this position manually?</DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              This will submit a market sell order for this position.
+            </DialogDescription>
           </DialogHeader>
           {closePositionDialog && (
             <div className="space-y-2 py-2">
