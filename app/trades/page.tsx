@@ -22,11 +22,20 @@ import {
 } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
   Search,
   Filter,
   Download,
   ChevronLeft,
   ChevronRight,
+  X,
 } from "lucide-react"
 
 interface OpenPosition {
@@ -294,6 +303,7 @@ export default function TradesPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [sideFilter, setSideFilter] = useState<string>("all")
   const [walletFilter, setWalletFilter] = useState<string>("all")
+  const [closePositionDialog, setClosePositionDialog] = useState<OpenPosition | null>(null)
 
   const filteredHistory = mockTradeHistory.filter((trade) => {
     const matchesSearch =
@@ -377,6 +387,7 @@ export default function TradesPage() {
                       <TableHead className="text-[10px] uppercase tracking-wider h-8 text-right hidden sm:table-cell">Current</TableHead>
                       <TableHead className="text-[10px] uppercase tracking-wider h-8 text-right hidden md:table-cell">Exposure</TableHead>
                       <TableHead className="text-[10px] uppercase tracking-wider h-8 text-right">PnL</TableHead>
+                      <TableHead className="text-[10px] uppercase tracking-wider h-8 text-right">Action</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -412,6 +423,16 @@ export default function TradesPage() {
                           <span className={cn("text-xs font-mono font-medium", position.pnlPositive ? "text-success" : "text-destructive")}>
                             {position.unrealizedPnl}
                           </span>
+                        </TableCell>
+                        <TableCell className="py-2 text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 hover:bg-destructive/20 hover:text-destructive"
+                            onClick={() => setClosePositionDialog(position)}
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -562,6 +583,58 @@ export default function TradesPage() {
           </Tabs>
         </div>
       </main>
+
+      {/* Close Position Confirmation Dialog */}
+      <Dialog open={!!closePositionDialog} onOpenChange={(open) => !open && setClosePositionDialog(null)}>
+        <DialogContent className="sm:max-w-[360px] bg-card border-border">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-semibold">Close this position manually?</DialogTitle>
+          </DialogHeader>
+          {closePositionDialog && (
+            <div className="space-y-2 py-2">
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">Market</span>
+                <span className="font-medium text-foreground">{closePositionDialog.market}</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">Outcome</span>
+                <span className={cn(
+                  "text-[10px] uppercase px-1.5 py-0.5 rounded-sm font-medium",
+                  closePositionDialog.outcome === "YES" ? "bg-success/20 text-success" : "bg-destructive/20 text-destructive"
+                )}>
+                  {closePositionDialog.outcome}
+                </span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">Size</span>
+                <span className="font-mono text-foreground">{closePositionDialog.size}</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">Follower</span>
+                <span className="font-mono text-muted-foreground">{closePositionDialog.followerAccount}...</span>
+              </div>
+            </div>
+          )}
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs"
+              onClick={() => setClosePositionDialog(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              className="text-xs"
+              onClick={() => setClosePositionDialog(null)}
+            >
+              Close Position
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
