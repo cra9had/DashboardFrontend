@@ -1,0 +1,1676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ snapshot.service_name }} Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/htmx.org@2.0.4" defer></script>
+    <script src="https://unpkg.com/lucide@latest" defer></script>
+    <style>
+        :root {
+            --background: oklch(0.13 0.005 250);
+            --foreground: oklch(0.92 0 0);
+            --card: oklch(0.16 0.005 250);
+            --secondary: oklch(0.22 0.005 250);
+            --muted: oklch(0.22 0.005 250);
+            --muted-foreground: oklch(0.6 0 0);
+            --accent: oklch(0.55 0.15 230);
+            --accent-foreground: oklch(0.95 0 0);
+            --destructive: oklch(0.55 0.2 25);
+            --border: oklch(0.25 0.005 250);
+            --success: oklch(0.7 0.18 145);
+            --warning: oklch(0.75 0.15 85);
+            --radius: 0.625rem;
+            --sidebar: oklch(0.11 0.005 250);
+            --sidebar-foreground: oklch(0.85 0 0);
+            --sidebar-accent: oklch(0.18 0.005 250);
+            --sidebar-border: oklch(0.22 0.005 250);
+            --font-sans: "Geist", system-ui, sans-serif;
+            --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            height: 100%;
+        }
+
+        body {
+            margin: 0;
+            background: var(--background);
+            color: var(--foreground);
+            font-family: var(--font-sans);
+        }
+
+        a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        i[data-lucide] {
+            width: 1rem;
+            height: 1rem;
+            display: inline-flex;
+            flex-shrink: 0;
+        }
+
+        .dashboard-shell {
+            min-height: 100vh;
+            display: flex;
+            background: var(--background);
+        }
+
+        .dashboard-sidebar {
+            width: 3.5rem;
+            flex-shrink: 0;
+            background: var(--sidebar);
+            border-right: 1px solid var(--sidebar-border);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-brand {
+            height: 3.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0 1rem;
+            border-bottom: 1px solid var(--sidebar-border);
+        }
+
+        .sidebar-brand__mark {
+            width: 1.6rem;
+            height: 1.6rem;
+            border-radius: 0.25rem;
+            background: var(--accent);
+            color: var(--accent-foreground);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.8rem;
+        }
+
+        .sidebar-brand__label {
+            display: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            color: var(--sidebar-foreground);
+        }
+
+        .sidebar-nav {
+            padding: 0.5rem;
+            display: grid;
+            gap: 0.2rem;
+        }
+
+        .sidebar-nav__item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            min-height: 2.4rem;
+            padding: 0 0.85rem;
+            border-radius: 0;
+            color: var(--muted-foreground);
+            font-size: 0.82rem;
+            font-weight: 500;
+            transition: background-color 120ms ease, color 120ms ease;
+        }
+
+        .sidebar-nav__item:hover,
+        .sidebar-nav__item--active {
+            background: color-mix(in oklab, var(--sidebar-accent) 100%, transparent);
+            color: var(--sidebar-foreground);
+        }
+
+        .sidebar-nav__icon {
+            width: 1rem;
+            height: 1rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .sidebar-nav__icon svg,
+        .kpi-card__trend svg,
+        .control-btn svg,
+        .wallet-tab__close svg {
+            width: 1rem;
+            height: 1rem;
+            stroke: currentColor;
+            stroke-width: 1.8;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            fill: none;
+            display: block;
+        }
+
+        .sidebar-nav__label {
+            display: none;
+        }
+
+        .sidebar-footer {
+            margin-top: auto;
+            padding: 0.9rem 1rem;
+            border-top: 1px solid var(--sidebar-border);
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            color: var(--muted-foreground);
+            font-size: 0.74rem;
+        }
+
+        .sidebar-footer__dot {
+            width: 0.45rem;
+            height: 0.45rem;
+            border-radius: 999px;
+            background: var(--success);
+            box-shadow: 0 0 0 0.2rem rgba(34, 197, 94, 0.12);
+        }
+
+        .sidebar-footer__label {
+            display: none;
+        }
+
+        .dashboard-main {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .dashboard-main__inner {
+            padding: 0.75rem;
+            display: grid;
+            gap: 0.75rem;
+        }
+
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.5rem;
+        }
+
+        .kpi-card,
+        .status-bar,
+        .wallet-shell,
+        .ops-panel {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: calc(var(--radius) - 4px);
+        }
+
+        .kpi-card {
+            padding: 0.7rem 0.8rem;
+            min-width: 0;
+        }
+
+        .kpi-card__label {
+            font-size: 0.61rem;
+            line-height: 1;
+            color: var(--muted-foreground);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-weight: 700;
+        }
+
+        .kpi-card__headline {
+            margin-top: 0.45rem;
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .kpi-card__trend {
+            width: 0.9rem;
+            height: 0.9rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .kpi-card__trend i[data-lucide] {
+            width: 0.9rem;
+            height: 0.9rem;
+        }
+
+        .kpi-card__trend--success svg {
+            stroke: var(--success);
+        }
+
+        .kpi-card__trend--danger svg {
+            stroke: var(--destructive);
+        }
+
+        .kpi-card__value {
+            font-family: var(--font-mono);
+            font-size: 1.02rem;
+            font-weight: 600;
+            color: var(--foreground);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .kpi-card__value--success {
+            color: var(--success);
+        }
+
+        .kpi-card__value--danger {
+            color: var(--destructive);
+        }
+
+        .kpi-card__subvalue {
+            margin-top: 0.2rem;
+            font-size: 0.63rem;
+            color: var(--muted-foreground);
+            font-family: var(--font-mono);
+        }
+
+        .status-bar {
+            padding: 0.55rem 0.8rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.55rem;
+            align-items: center;
+            background: color-mix(in oklab, var(--secondary) 30%, transparent);
+        }
+
+        .status-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            padding: 0;
+            color: var(--muted-foreground);
+            font-size: 0.65rem;
+            font-weight: 600;
+            font-family: var(--font-mono);
+            white-space: nowrap;
+        }
+
+        .status-chip::before {
+            content: none;
+        }
+
+        .status-chip--ok {
+            color: var(--success);
+        }
+
+        .status-chip--warn {
+            color: var(--warning);
+        }
+
+        .status-chip--danger {
+            color: var(--destructive);
+        }
+
+        .status-chip--dot::before {
+            content: "";
+            width: 0.38rem;
+            height: 0.38rem;
+            border-radius: 999px;
+            background: currentColor;
+            flex-shrink: 0;
+        }
+
+        .status-sep {
+            width: 1px;
+            height: 0.75rem;
+            background: var(--border);
+        }
+
+        .wallet-shell {
+            min-width: 0;
+        }
+
+        .wallet-tabs {
+            display: flex;
+            align-items: flex-end;
+            gap: 0.18rem;
+            overflow-x: auto;
+            padding: 0.5rem 0.5rem 0;
+            background: color-mix(in oklab, var(--secondary) 55%, transparent);
+            border-bottom: 1px solid var(--border);
+            border-radius: calc(var(--radius) - 4px) calc(var(--radius) - 4px) 0 0;
+        }
+
+        .wallet-tab-shell {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            min-width: 11.5rem;
+            border: 1px solid transparent;
+            border-bottom: 0;
+            border-radius: calc(var(--radius) - 4px) calc(var(--radius) - 4px) 0 0;
+            background: color-mix(in oklab, var(--secondary) 50%, transparent);
+            color: var(--muted-foreground);
+            transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
+        }
+
+        .wallet-tab-shell:hover {
+            background: var(--secondary);
+            color: var(--foreground);
+        }
+
+        .wallet-tab-shell--active {
+            background: var(--card);
+            color: var(--foreground);
+            border-color: var(--border);
+            position: relative;
+            z-index: 1;
+        }
+
+        .wallet-tab {
+            min-width: 0;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.55rem 0.2rem 0.55rem 0.75rem;
+        }
+
+        .wallet-tab__row {
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+            min-width: 0;
+            flex: 1;
+        }
+
+        .badge-dot {
+            color: var(--muted-foreground);
+        }
+
+        .badge-dot svg {
+            fill: currentColor;
+            stroke-width: 1.5;
+        }
+
+        .badge-dot--ok {
+            color: var(--success);
+        }
+
+        .badge-dot--muted {
+            color: var(--muted-foreground);
+        }
+
+        .wallet-tab__name {
+            min-width: 0;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+        }
+
+        .wallet-tab__status {
+            font-size: 0.625rem;
+            font-family: var(--font-mono);
+            white-space: nowrap;
+        }
+
+        .wallet-tab__status--ok {
+            color: var(--success);
+        }
+
+        .wallet-tab__status--danger {
+            color: var(--destructive);
+        }
+
+        .wallet-tab__status--muted {
+            color: var(--muted-foreground);
+        }
+
+        .wallet-tab__close {
+            width: 1.5rem;
+            height: 1.5rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 120ms ease;
+            color: var(--muted-foreground);
+            flex-shrink: 0;
+            margin-right: 0.35rem;
+            border: 0;
+            background: transparent;
+            cursor: pointer;
+            position: relative;
+            z-index: 2;
+        }
+
+        .wallet-tab-shell:hover .wallet-tab__close {
+            opacity: 0.5;
+        }
+
+        .wallet-tab-shell--active .wallet-tab__close {
+            opacity: 0.3;
+        }
+
+        .wallet-tab__close:hover {
+            opacity: 1 !important;
+            color: var(--foreground);
+        }
+
+        .wallet-tab__close i[data-lucide] {
+            width: 0.75rem;
+            height: 0.75rem;
+        }
+
+        .wallet-tab-shell--add {
+            min-width: auto;
+            width: 2rem;
+            justify-content: center;
+            padding: 0;
+        }
+
+        .wallet-tab--add {
+            justify-content: center;
+            width: 100%;
+            padding: 0.55rem 0;
+            border: 0;
+            background: transparent;
+            color: inherit;
+            cursor: pointer;
+        }
+
+        .wallet-tab__meta {
+            font-size: 0.63rem;
+            font-family: var(--font-mono);
+        }
+
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            z-index: 60;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.72);
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-card {
+            width: min(100%, 34rem);
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: calc(var(--radius) - 2px);
+            box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+            overflow: hidden;
+        }
+
+        .modal-card--confirm {
+            width: min(100%, 26rem);
+        }
+
+        .modal-header {
+            padding: 0.95rem 1rem 0.85rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .modal-header__eyebrow {
+            margin-bottom: 0.28rem;
+            font-size: 0.6rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--muted-foreground);
+            font-weight: 700;
+        }
+
+        .modal-header__title {
+            font-size: 0.9rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: var(--foreground);
+        }
+
+        .modal-close {
+            width: 1.8rem;
+            height: 1.8rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--border);
+            border-radius: calc(var(--radius) - 6px);
+            color: var(--muted-foreground);
+            background: color-mix(in oklab, var(--secondary) 60%, transparent);
+            flex-shrink: 0;
+        }
+
+        .modal-close:hover {
+            color: var(--foreground);
+            border-color: color-mix(in oklab, var(--border) 55%, white);
+        }
+
+        .modal-body {
+            padding: 1rem;
+            display: grid;
+            gap: 0.9rem;
+        }
+
+        .modal-section {
+            display: grid;
+            gap: 0.65rem;
+        }
+
+        .modal-section__title {
+            font-size: 0.61rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--muted-foreground);
+            font-weight: 700;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.75rem;
+        }
+
+        .form-grid--single {
+            grid-template-columns: 1fr;
+        }
+
+        .form-field {
+            display: grid;
+            gap: 0.4rem;
+        }
+
+        .form-field--full {
+            grid-column: 1 / -1;
+        }
+
+        .form-field__label {
+            font-size: 0.63rem;
+            color: var(--muted-foreground);
+            font-weight: 600;
+            letter-spacing: -0.01em;
+        }
+
+        .form-input,
+        .form-select {
+            width: 100%;
+            min-height: 2.45rem;
+            border-radius: calc(var(--radius) - 5px);
+            border: 1px solid var(--border);
+            background: color-mix(in oklab, var(--secondary) 55%, transparent);
+            color: var(--foreground);
+            font-size: 0.78rem;
+            padding: 0 0.75rem;
+            font-family: var(--font-sans);
+            outline: none;
+        }
+
+        .form-input::placeholder {
+            color: var(--muted-foreground);
+        }
+
+        .form-input:focus,
+        .form-select:focus {
+            border-color: color-mix(in oklab, var(--accent) 65%, white);
+            box-shadow: 0 0 0 1px color-mix(in oklab, var(--accent) 55%, transparent);
+        }
+
+        .modal-footer {
+            padding: 0.9rem 1rem 1rem;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.65rem;
+        }
+
+        .modal-copy {
+            font-size: 0.78rem;
+            line-height: 1.5;
+            color: var(--foreground);
+        }
+
+        .modal-copy__meta {
+            margin-top: 0.4rem;
+            font-size: 0.68rem;
+            color: var(--muted-foreground);
+            font-family: var(--font-mono);
+        }
+
+        .wallet-detail {
+            min-height: 18.75rem;
+            height: 18.75rem;
+            overflow: hidden;
+        }
+
+        .wallet-detail__empty {
+            min-height: 18.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--muted-foreground);
+            font-size: 0.82rem;
+        }
+
+        .wallet-detail__grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            height: 100%;
+        }
+
+        .detail-column {
+            padding: 0.85rem;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .detail-column + .detail-column {
+            border-top: 1px solid var(--border);
+        }
+
+        .section-kicker {
+            margin-bottom: 0.55rem;
+            font-size: 0.61rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--muted-foreground);
+            font-weight: 700;
+        }
+
+        .stat-row {
+            min-height: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            border-bottom: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+        }
+
+        .stat-row:last-child {
+            border-bottom: 0;
+        }
+
+        .stat-row__label {
+            font-size: 0.66rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--muted-foreground);
+            font-weight: 700;
+        }
+
+        .stat-row__value {
+            color: var(--foreground);
+            font-size: 0.76rem;
+            text-align: right;
+            min-width: 0;
+        }
+
+        .stat-row__value--mono {
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            color: var(--muted-foreground);
+            word-break: break-all;
+        }
+
+        .stat-row__value--success {
+            color: var(--success);
+            font-weight: 600;
+        }
+
+        .stat-row__value--warning {
+            color: var(--warning);
+            font-weight: 600;
+        }
+
+        .empty-card {
+            min-height: 13.5rem;
+            background: color-mix(in oklab, var(--secondary) 40%, transparent);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--muted-foreground);
+            font-size: 0.8rem;
+            text-align: center;
+            padding: 1rem;
+            border-radius: calc(var(--radius) - 4px);
+        }
+
+        .position-list,
+        .trade-list {
+            display: grid;
+            gap: 0.5rem;
+        }
+
+        .detail-scroll {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            padding-right: 0.2rem;
+        }
+
+        .detail-scroll::-webkit-scrollbar {
+            width: 0.38rem;
+        }
+
+        .detail-scroll::-webkit-scrollbar-thumb {
+            background: color-mix(in oklab, var(--secondary) 80%, transparent);
+            border-radius: 999px;
+        }
+
+        .detail-scroll::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .position-card {
+            background: color-mix(in oklab, var(--secondary) 35%, transparent);
+            border: 1px solid var(--border);
+            border-radius: calc(var(--radius) - 4px);
+            padding: 0.6rem 0.7rem;
+            display: grid;
+            gap: 0.4rem;
+        }
+
+        .position-card__head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+        }
+
+        .position-card__market {
+            min-width: 0;
+            font-size: 0.76rem;
+            font-weight: 600;
+            color: var(--foreground);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .position-card__side {
+            padding: 0.1rem 0.32rem;
+            border-radius: calc(var(--radius) - 6px);
+            font-size: 0.56rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+        }
+
+        .position-card__side--buy {
+            color: var(--success);
+            background: color-mix(in oklab, var(--success) 18%, transparent);
+        }
+
+        .position-card__side--sell {
+            color: var(--destructive);
+            background: color-mix(in oklab, var(--destructive) 18%, transparent);
+        }
+
+        .position-card__side--muted {
+            color: var(--muted-foreground);
+            background: color-mix(in oklab, var(--secondary) 80%, transparent);
+        }
+
+        .position-card__stats {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 0.4rem;
+        }
+
+        .position-card__stat-label {
+            font-size: 0.58rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--muted-foreground);
+            margin-bottom: 0.14rem;
+        }
+
+        .position-card__stat-value {
+            font-size: 0.66rem;
+            font-family: var(--font-mono);
+            color: var(--foreground);
+        }
+
+        .position-card__stat-value--success {
+            color: var(--success);
+            font-weight: 600;
+        }
+
+        .position-card__stat-value--danger {
+            color: var(--destructive);
+            font-weight: 600;
+        }
+
+        .position-card__stat-value--muted {
+            color: var(--muted-foreground);
+        }
+
+        .trade-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.55rem;
+            padding: 0.15rem 0;
+            border-bottom: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+        }
+
+        .trade-row:last-child {
+            border-bottom: 0;
+        }
+
+        .trade-row__icon {
+            width: 0.9rem;
+            height: 0.9rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            margin-top: 0.08rem;
+        }
+
+        .trade-row__icon i[data-lucide] {
+            width: 0.9rem;
+            height: 0.9rem;
+        }
+
+        .trade-row__icon--success {
+            color: var(--success);
+        }
+
+        .trade-row__icon--warning {
+            color: var(--warning);
+        }
+
+        .trade-row__icon--danger {
+            color: var(--destructive);
+        }
+
+        .trade-row__icon--muted {
+            color: var(--muted-foreground);
+        }
+
+        .trade-row__body {
+            min-width: 0;
+            flex: 1;
+            display: grid;
+            gap: 0.15rem;
+        }
+
+        .trade-row__top {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            min-width: 0;
+        }
+
+        .trade-row__time,
+        .trade-row__meta {
+            font-size: 0.62rem;
+            font-family: var(--font-mono);
+            color: var(--muted-foreground);
+        }
+
+        .trade-row__action {
+            font-size: 0.66rem;
+            font-weight: 700;
+        }
+
+        .trade-row__action--buy {
+            color: var(--success);
+        }
+
+        .trade-row__action--sell {
+            color: var(--destructive);
+        }
+
+        .trade-row__market {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 0.72rem;
+            color: var(--foreground);
+        }
+
+        .trade-row__note {
+            color: var(--warning);
+            font-size: 0.62rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .ops-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0.75rem;
+        }
+
+        .ops-panel__header {
+            padding: 0.65rem 0.8rem;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.66rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--muted-foreground);
+            font-weight: 700;
+        }
+
+        .ops-panel__body {
+            padding: 0.65rem;
+        }
+
+        .control-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.45rem;
+        }
+
+        .control-grid form {
+            margin: 0;
+        }
+
+        .control-btn {
+            min-height: 2rem;
+            padding: 0 0.85rem;
+            width: 100%;
+            border: 1px solid var(--border);
+            background: color-mix(in oklab, var(--secondary) 70%, transparent);
+            color: var(--foreground);
+            font-size: 0.74rem;
+            font-weight: 600;
+            border-radius: calc(var(--radius) - 4px);
+            transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.45rem;
+        }
+
+        .control-btn:hover {
+            background: var(--secondary);
+        }
+
+        .control-btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+            background: color-mix(in oklab, var(--secondary) 50%, transparent);
+        }
+
+        .control-btn svg {
+            width: 0.82rem;
+            height: 0.82rem;
+        }
+
+        .control-btn--success {
+            color: var(--success);
+        }
+
+        .control-btn--warn {
+            color: var(--warning);
+        }
+
+        .control-btn--danger {
+            color: var(--danger);
+        }
+
+        .mini-list {
+            display: grid;
+            gap: 0;
+        }
+
+        .mini-list__row {
+            min-height: 1.95rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            border-bottom: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+        }
+
+        .mini-list__row:last-child {
+            border-bottom: 0;
+        }
+
+        .mini-list__label {
+            color: var(--muted-foreground);
+            font-size: 0.7rem;
+        }
+
+        .mini-list__value {
+            color: var(--foreground);
+            font-size: 0.72rem;
+            font-family: var(--font-mono);
+            text-align: right;
+        }
+
+        .stack-list {
+            display: grid;
+            gap: 0.4rem;
+        }
+
+        .stack-list__row {
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            min-height: 1.3rem;
+            font-size: 0.72rem;
+        }
+
+        .stack-list__bullet {
+            width: 0.36rem;
+            height: 0.36rem;
+            border-radius: 999px;
+            background: var(--muted-foreground);
+            flex-shrink: 0;
+        }
+
+        .stack-list__bullet--buy {
+            background: var(--success);
+        }
+
+        .stack-list__bullet--sell {
+            background: var(--destructive);
+        }
+
+        .stack-list__main {
+            min-width: 0;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .stack-list__meta {
+            color: var(--muted-foreground);
+            font-family: var(--font-mono);
+        }
+
+        .muted-note {
+            color: var(--muted-foreground);
+            font-size: 0.72rem;
+            line-height: 1.4;
+        }
+
+        @media (min-width: 768px) {
+            .dashboard-main__inner {
+                padding: 1rem;
+            }
+
+            .kpi-grid {
+                grid-template-columns: repeat(5, minmax(0, 1fr));
+            }
+
+            .ops-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (min-width: 1100px) {
+            .dashboard-sidebar {
+                width: 12rem;
+            }
+
+            .sidebar-brand__label,
+            .sidebar-nav__label,
+            .sidebar-footer__label {
+                display: inline;
+            }
+
+            .wallet-detail__grid {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+
+            .detail-column + .detail-column {
+                border-top: 0;
+                border-left: 1px solid var(--border-color);
+            }
+
+            .ops-grid {
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 899px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .form-field--full {
+                grid-column: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="dashboard-shell">
+    <aside class="dashboard-sidebar">
+        <div class="sidebar-brand">
+            <span class="sidebar-brand__mark">P</span>
+            <span class="sidebar-brand__label">Polymarket Ops</span>
+        </div>
+        <nav class="sidebar-nav">
+            <a class="sidebar-nav__item sidebar-nav__item--active" href="/dashboard">
+                <span class="sidebar-nav__icon">
+                    <i data-lucide="layout-dashboard"></i>
+                </span>
+                <span class="sidebar-nav__label">Overview</span>
+            </a>
+            <a class="sidebar-nav__item" href="/dashboard">
+                <span class="sidebar-nav__icon">
+                    <i data-lucide="wallet"></i>
+                </span>
+                <span class="sidebar-nav__label">Wallets</span>
+            </a>
+            <a class="sidebar-nav__item" href="/dashboard">
+                <span class="sidebar-nav__icon">
+                    <i data-lucide="sliders-horizontal"></i>
+                </span>
+                <span class="sidebar-nav__label">Control</span>
+            </a>
+            <a class="sidebar-nav__item" href="/dashboard">
+                <span class="sidebar-nav__icon">
+                    <i data-lucide="arrow-left-right"></i>
+                </span>
+                <span class="sidebar-nav__label">Trades</span>
+            </a>
+            <a class="sidebar-nav__item" href="/dashboard">
+                <span class="sidebar-nav__icon">
+                    <i data-lucide="shield-alert"></i>
+                </span>
+                <span class="sidebar-nav__label">Risk</span>
+            </a>
+            <a class="sidebar-nav__item" href="/dashboard">
+                <span class="sidebar-nav__icon">
+                    <i data-lucide="line-chart"></i>
+                </span>
+                <span class="sidebar-nav__label">Analyzer</span>
+            </a>
+        </nav>
+        <div class="sidebar-footer">
+            <span class="sidebar-footer__dot"></span>
+            <span class="sidebar-footer__label">Connected</span>
+        </div>
+    </aside>
+
+    <main class="dashboard-main">
+        <div
+            id="dashboard-live-content"
+            class="dashboard-main__inner"
+            hx-get="{{ self.live_refresh_href() }}"
+            hx-trigger="{{ self.live_refresh_trigger() }}"
+            hx-select="#dashboard-live-content"
+            hx-swap="outerHTML"
+        >
+            <section class="kpi-grid">
+                <article class="kpi-card">
+                    <div class="kpi-card__label">Total PnL</div>
+                    <div class="kpi-card__headline">
+                        <span class="kpi-card__trend {% if self.selected_realized_pnl_total_trend() == "down" %}kpi-card__trend--danger{% else %}kpi-card__trend--success{% endif %}">
+                            {% if self.selected_realized_pnl_total_trend() == "down" %}
+                            <i data-lucide="trending-down"></i>
+                            {% else %}
+                            <i data-lucide="trending-up"></i>
+                            {% endif %}
+                        </span>
+                        <div class="kpi-card__value {{ self.selected_realized_pnl_total_class() }}">{{ self.selected_realized_pnl_total_label() }}</div>
+                    </div>
+                    <div class="kpi-card__subvalue">Realized all time</div>
+                </article>
+                <article class="kpi-card">
+                    <div class="kpi-card__label">Today PnL</div>
+                    <div class="kpi-card__headline">
+                        <span class="kpi-card__trend {% if self.selected_realized_pnl_today_trend() == "down" %}kpi-card__trend--danger{% else %}kpi-card__trend--success{% endif %}">
+                            {% if self.selected_realized_pnl_today_trend() == "down" %}
+                            <i data-lucide="trending-down"></i>
+                            {% else %}
+                            <i data-lucide="trending-up"></i>
+                            {% endif %}
+                        </span>
+                        <div class="kpi-card__value {{ self.selected_realized_pnl_today_class() }}">{{ self.selected_realized_pnl_today_label() }}</div>
+                    </div>
+                    <div class="kpi-card__subvalue">{{ self.observed_events_subvalue() }}</div>
+                </article>
+                <article class="kpi-card">
+                    <div class="kpi-card__label">Open Positions</div>
+                    <div class="kpi-card__value">{{ self.selected_open_positions_count() }}</div>
+                    <div class="kpi-card__subvalue">{{ self.selected_open_positions_value() }}</div>
+                </article>
+                <article class="kpi-card">
+                    <div class="kpi-card__label">Active Wallets</div>
+                    <div class="kpi-card__value kpi-card__value--success">{{ self.enabled_pairs() }}/{{ self.total_pairs() }}</div>
+                    <div class="kpi-card__subvalue">{{ self.active_wallets_subvalue() }}</div>
+                </article>
+                <article class="kpi-card">
+                    <div class="kpi-card__label">Win Rate</div>
+                    <div class="kpi-card__value kpi-card__value--success">{{ self.selected_win_rate_label() }}</div>
+                    <div class="kpi-card__subvalue">{{ self.selected_win_rate_detail() }}</div>
+                </article>
+            </section>
+
+            <section class="status-bar">
+                <span class="{{ self.runtime_badge_class() }} status-chip--dot">{{ self.runtime_label() }}</span>
+                <span class="status-sep"></span>
+                <span class="{{ self.mode_badge_class() }} status-chip--dot">{{ self.mode_label() }}</span>
+                <span class="status-sep"></span>
+                <span class="{{ self.monitoring_badge_class() }}">{{ self.monitoring_label() }}</span>
+                <span class="status-sep"></span>
+                <span class="{{ self.database_badge_class() }}">{{ self.database_label() }}</span>
+                <span class="status-sep"></span>
+                <span class="status-chip">Latency: {{ self.current_latency_label() }}</span>
+                <span class="status-sep"></span>
+                <span class="status-chip">{{ snapshot.environment }}</span>
+            </section>
+
+            <section class="wallet-shell">
+                <div class="wallet-tabs">
+                    {% for pair in snapshot.pairs %}
+                    <div class="wallet-tab-shell {% if self.is_selected_pair(loop.index0) %}wallet-tab-shell--active{% endif %}">
+                        <a href="{{ self.tab_href(loop.index0) }}" class="wallet-tab">
+                            <div class="wallet-tab__row">
+                                <i data-lucide="circle" class="{{ self.pair_running_badge_class(pair.running) }}"></i>
+                                <span class="wallet-tab__name">{{ pair.name }}</span>
+                            </div>
+                            <span class="{{ self.tab_metric_class(loop.index0) }}">{{ self.tab_metric(loop.index0) }}</span>
+                        </a>
+                        <button
+                            type="button"
+                            class="wallet-tab__close"
+                            aria-label="Delete {{ pair.name }}"
+                            onclick="window.location.href='{{ self.delete_pair_href(loop.index0) }}'"
+                        >
+                            <i data-lucide="x"></i>
+                        </button>
+                    </div>
+                    {% endfor %}
+                    <div class="wallet-tab-shell wallet-tab-shell--add">
+                    <button
+                        type="button"
+                        class="wallet-tab wallet-tab--add"
+                        aria-label="Add wallet"
+                        onclick="window.location.href='{{ self.add_pair_href() }}'"
+                    >
+                        <span class="wallet-tab__close" style="opacity:1; margin-right:0;">
+                            <i data-lucide="plus"></i>
+                        </span>
+                    </button>
+                    </div>
+                </div>
+
+                {% match self.selected_pair() %}
+                {% when Some with (pair) %}
+                <div class="wallet-detail">
+                    <div class="wallet-detail__grid">
+                        <section class="detail-column">
+                            <div class="section-kicker">Configuration</div>
+                            <div class="stat-row">
+                                <span class="stat-row__label">Pair</span>
+                                <span class="stat-row__value">{{ pair.name }}</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-row__label">Source</span>
+                                <span class="stat-row__value stat-row__value--mono">{{ pair.source_wallet }}</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-row__label">Follower</span>
+                                <span class="stat-row__value stat-row__value--mono">{{ pair.follower_account }}</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-row__label">Sizing</span>
+                                <span class="stat-row__value">{{ pair.sizing_mode_label }}{% if pair.sizing_mode_label == "Fixed" %} · {{ pair.fixed_order_size }}{% endif %}</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-row__label">Max Position</span>
+                                <span class="stat-row__value">{{ pair.max_position_size }}</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-row__label">Max Deviation</span>
+                                <span class="stat-row__value stat-row__value--warning">{{ pair.max_price_deviation_bps }} bps</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-row__label">State</span>
+                                <span class="stat-row__value {% if pair.running %}stat-row__value--success{% endif %}">
+                                    {{ self.pair_running_label(pair.running) }}
+                                </span>
+                            </div>
+                        </section>
+
+                        <section class="detail-column">
+                            <div class="section-kicker">Open Positions</div>
+                            {% if self.has_positions_for_display() %}
+                            <div class="detail-scroll">
+                            <div class="position-list">
+                                {% for position in self.positions_for_display() %}
+                                <div class="position-card">
+                                    <div class="position-card__head">
+                                        <div class="position-card__market">{{ position.market }}</div>
+                                        <span class="{{ self.position_side_class(position.side) }}">
+                                            {{ position.side }}
+                                        </span>
+                                    </div>
+                                    <div class="position-card__stats">
+                                        <div>
+                                            <div class="position-card__stat-label">Size</div>
+                                            <div class="position-card__stat-value">{{ position.size }}</div>
+                                        </div>
+                                        <div>
+                                            <div class="position-card__stat-label">Entry</div>
+                                            <div class="position-card__stat-value">{{ position.entry }}</div>
+                                        </div>
+                                        <div>
+                                            <div class="position-card__stat-label">Current</div>
+                                            <div class="position-card__stat-value">{{ position.current }}</div>
+                                        </div>
+                                        <div>
+                                            <div class="position-card__stat-label">PnL</div>
+                                            <div class="{{ self.position_pnl_class(position) }}">
+                                                {{ position.pnl }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            </div>
+                            {% else %}
+                            <div class="empty-card">No open positions yet</div>
+                            {% endif %}
+                        </section>
+
+                        <section class="detail-column">
+                            <div class="section-kicker">Recent Trades</div>
+                            {% if self.has_trades_for_display() %}
+                            <div class="detail-scroll">
+                            <div class="trade-list">
+                                {% for trade in self.trades_for_display() %}
+                                <div class="trade-row">
+                                    <div class="{{ self.trade_icon_class(trade.status) }}">
+                                        <i data-lucide="{{ self.trade_icon_name(trade.status) }}"></i>
+                                    </div>
+                                    <div class="trade-row__body">
+                                        <div class="trade-row__top">
+                                            <span class="trade-row__time">{{ trade.time_label }}</span>
+                                            <span class="{{ self.trade_action_class(trade.action) }}">{{ trade.action }}</span>
+                                            <span class="trade-row__market">{{ trade.market_label }}</span>
+                                        </div>
+                                        <div class="trade-row__meta">{{ trade.size_label }} @ {{ trade.price_label }}</div>
+                                        {% match trade.note %}
+                                        {% when Some with (note) %}
+                                        <div class="trade-row__note">{{ note }}</div>
+                                        {% when None %}{% endmatch %}
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            </div>
+                            {% else %}
+                            <div class="empty-card">No recent trades yet</div>
+                            {% endif %}
+                        </section>
+                    </div>
+                </div>
+                {% when None %}
+                <div class="wallet-detail__empty">
+                    No wallet pairs configured
+                </div>
+                {% endmatch %}
+            </section>
+
+            <section class="ops-grid">
+                <article class="ops-panel">
+                    <div class="ops-panel__header">Control</div>
+                    <div class="ops-panel__body">
+                        <div class="control-grid">
+                            <form method="post" action="/dashboard/pairs/start">
+                                <input type="hidden" name="pair_index" value="{{ self.selected_pair_index_value() }}">
+                                <button type="submit" class="control-btn control-btn--success" {% if !self.start_button_enabled() %}disabled{% endif %}>
+                                    <i data-lucide="play"></i>
+                                    <span>Start</span>
+                                </button>
+                            </form>
+                            <form method="post" action="/dashboard/pairs/pause">
+                                <input type="hidden" name="pair_index" value="{{ self.selected_pair_index_value() }}">
+                                <button type="submit" class="control-btn control-btn--warn" {% if !self.pause_button_enabled() %}disabled{% endif %}>
+                                    <i data-lucide="pause"></i>
+                                    <span>Pause</span>
+                                </button>
+                            </form>
+                            <form method="post" action="/dashboard/pairs/estop">
+                                <input type="hidden" name="pair_index" value="{{ self.selected_pair_index_value() }}">
+                                <button type="submit" class="control-btn control-btn--danger" {% if !self.estop_button_enabled() %}disabled{% endif %}>
+                                    <i data-lucide="alert-octagon"></i>
+                                    <span>E-Stop</span>
+                                </button>
+                            </form>
+                            <button type="button" class="control-btn">
+                                <i data-lucide="toggle-left"></i>
+                                <span>Toggle Pair</span>
+                            </button>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="ops-panel">
+                    <div class="ops-panel__header">Risk</div>
+                    <div class="ops-panel__body">
+                        {% match self.selected_pair() %}
+                        {% when Some with (pair) %}
+                        <div class="mini-list">
+                            <div class="mini-list__row">
+                                <span class="mini-list__label">Sizing</span>
+                                <span class="mini-list__value">{{ pair.sizing_mode_label }}{% if pair.sizing_mode_label == "Fixed" %} · {{ pair.fixed_order_size }}{% endif %}</span>
+                            </div>
+                            <div class="mini-list__row">
+                                <span class="mini-list__label">Max Position</span>
+                                <span class="mini-list__value">{{ pair.max_position_size }}</span>
+                            </div>
+                            <div class="mini-list__row">
+                                <span class="mini-list__label">Deviation</span>
+                                <span class="mini-list__value">{{ pair.max_price_deviation_bps }} bps</span>
+                            </div>
+                            <div class="mini-list__row">
+                                <span class="mini-list__label">Skip Logic</span>
+                                <span class="mini-list__value">Enabled</span>
+                            </div>
+                        </div>
+                        {% when None %}
+                        <div class="muted-note">No pair selected.</div>
+                        {% endmatch %}
+                    </div>
+                </article>
+
+                <article class="ops-panel">
+                    <div class="ops-panel__header">Statistics</div>
+                    <div class="ops-panel__body">
+                        <div class="mini-list">
+                            <div class="mini-list__row">
+                                <span class="mini-list__label">Copied</span>
+                                <span class="mini-list__value">{{ self.current_total_copied_trades() }}</span>
+                            </div>
+                            <div class="mini-list__row">
+                                <span class="mini-list__label">Submitted</span>
+                                <span class="mini-list__value">{{ self.current_submitted_executions() }}</span>
+                            </div>
+                            <div class="mini-list__row">
+                                <span class="mini-list__label">Skipped</span>
+                                <span class="mini-list__value">{{ self.current_skipped_executions() }}</span>
+                            </div>
+                            <div class="mini-list__row">
+                                <span class="mini-list__label">Failed</span>
+                                <span class="mini-list__value">{{ self.current_failed_executions() }}</span>
+                            </div>
+                            <div class="mini-list__row">
+                                <span class="mini-list__label">Avg Delay</span>
+                                <span class="mini-list__value">{{ self.current_avg_execution_delay_label() }}</span>
+                            </div>
+                            <div class="mini-list__row">
+                                <span class="mini-list__label">Avg Slippage</span>
+                                <span class="mini-list__value">{{ self.current_avg_slippage_label() }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="ops-panel">
+                    <div class="ops-panel__header">Trades &amp; Positions</div>
+                    <div class="ops-panel__body">
+                        <div class="stack-list">
+                            {% for position in self.positions_for_display() %}
+                            <div class="stack-list__row">
+                                <span class="{{ self.position_stack_bullet_class(position) }}"></span>
+                                <span class="stack-list__main">{{ position.market }}</span>
+                                <span class="stack-list__meta">{{ position.size }}</span>
+                            </div>
+                            {% endfor %}
+                            {% for trade in self.trades_for_display() %}
+                            <div class="stack-list__row">
+                                <span class="stack-list__bullet {% if trade.action == "BUY" %}stack-list__bullet--buy{% else %}stack-list__bullet--sell{% endif %}"></span>
+                                <span class="stack-list__main">{{ trade.market_label }}</span>
+                                <span class="stack-list__meta">{{ trade.price_label }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </article>
+            </section>
+
+            {% if self.add_modal_open() %}
+            <div class="modal-backdrop">
+                <div class="modal-card">
+                    <div class="modal-header">
+                        <div>
+                            <div class="modal-header__eyebrow">Add Wallet Pair</div>
+                            <div class="modal-header__title">New copy-trading tab</div>
+                        </div>
+                        <a href="{{ self.close_modal_href() }}" class="modal-close" aria-label="Close">
+                            <i data-lucide="x"></i>
+                        </a>
+                    </div>
+                    <div class="modal-body">
+                        <form method="post" action="/dashboard/pairs/add">
+                            <input type="hidden" name="selected_pair" value="{{ snapshot.selected_pair_index }}">
+                            <div class="modal-section">
+                                <div class="modal-section__title">Pair</div>
+                                <div class="form-grid form-grid--single">
+                                    <label class="form-field">
+                                        <span class="form-field__label">Name</span>
+                                        <input class="form-input" type="text" name="pair_name" placeholder="Hungary PM — Egg copy">
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="modal-section">
+                                <div class="modal-section__title">Execution Wallet</div>
+                                <div class="form-grid">
+                                    <label class="form-field">
+                                        <span class="form-field__label">Polymarket API Key</span>
+                                        <input class="form-input" type="text" name="polymarket_api_key" placeholder="019d...">
+                                    </label>
+                                    <label class="form-field">
+                                        <span class="form-field__label">Signature Type</span>
+                                        <select class="form-select" name="signature_type">
+                                            <option>Proxy</option>
+                                            <option>EOA</option>
+                                            <option>Gnosis Safe</option>
+                                        </select>
+                                    </label>
+                                    <label class="form-field form-field--full">
+                                        <span class="form-field__label">Private Key</span>
+                                        <input class="form-input" type="password" name="private_key" placeholder="0x...">
+                                    </label>
+                                    <label class="form-field form-field--full">
+                                        <span class="form-field__label">Funder Address</span>
+                                        <input class="form-input" type="text" name="funder_address" placeholder="0x... (optional)">
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="modal-section">
+                                <div class="modal-section__title">Source</div>
+                                <div class="form-grid form-grid--single">
+                                    <label class="form-field">
+                                        <span class="form-field__label">Polymarket Polygon Address</span>
+                                        <input class="form-input" type="text" name="source_wallet" placeholder="0x...">
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <a href="{{ self.close_modal_href() }}" class="control-btn">
+                                    <i data-lucide="x"></i>
+                                    <span>Cancel</span>
+                                </a>
+                                <button type="submit" class="control-btn control-btn--success">
+                                    <i data-lucide="plus"></i>
+                                    <span>Add</span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if self.delete_modal_open() %}
+            <div class="modal-backdrop">
+                <div class="modal-card modal-card--confirm">
+                    <div class="modal-header">
+                        <div>
+                            <div class="modal-header__eyebrow">Delete Wallet Pair</div>
+                            <div class="modal-header__title">Are you sure you want to delete?</div>
+                        </div>
+                        <a href="{{ self.close_modal_href() }}" class="modal-close" aria-label="Close">
+                            <i data-lucide="x"></i>
+                        </a>
+                    </div>
+                    <div class="modal-body">
+                        <div class="modal-copy">
+                            {{ self.delete_modal_pair_name() }}
+                            <div class="modal-copy__meta">{{ self.delete_modal_pair_wallet() }}</div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <a href="{{ self.close_modal_href() }}" class="control-btn">
+                            <i data-lucide="arrow-left"></i>
+                            <span>Cancel</span>
+                        </a>
+                        <form method="post" action="/dashboard/pairs/delete">
+                            <input type="hidden" name="pair_index" value="{{ self.delete_modal_pair_index_value() }}">
+                            <input type="hidden" name="selected_pair" value="{{ snapshot.selected_pair_index }}">
+                            <button type="submit" class="control-btn control-btn--danger">
+                                <i data-lucide="trash-2"></i>
+                                <span>Delete</span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </main>
+</div>
+<script>
+    function refreshDashboardIcons() {
+        if (window.lucide && typeof window.lucide.createIcons === "function") {
+            window.lucide.createIcons();
+        }
+    }
+
+    window.addEventListener("DOMContentLoaded", function () {
+        refreshDashboardIcons();
+    });
+
+    document.body.addEventListener("htmx:afterSwap", function (event) {
+        if (event.target && event.target.id === "dashboard-live-content") {
+            refreshDashboardIcons();
+        }
+    });
+</script>
+</body>
+</html>
