@@ -18,7 +18,6 @@ import {
   Save,
   RotateCcw,
   Check,
-  Plus,
   X,
   AlertTriangle,
 } from "lucide-react"
@@ -82,11 +81,27 @@ export default function RiskPage() {
   const [minPositionSize, setMinPositionSize] = useState("100")
   const [maxOpenPositions, setMaxOpenPositions] = useState("25")
 
-  // Market filters
-  const [whitelistMarkets, setWhitelistMarkets] = useState<string[]>([])
-  const [blacklistMarkets, setBlacklistMarkets] = useState<string[]>(["Adult Content", "Violence"])
-  const [newWhitelistItem, setNewWhitelistItem] = useState("")
-  const [newBlacklistItem, setNewBlacklistItem] = useState("")
+  // Market category filters
+  const [whitelistCategories, setWhitelistCategories] = useState<string[]>(["sports", "crypto"])
+  const [blacklistCategories, setBlacklistCategories] = useState<string[]>(["adult", "violence"])
+
+  // Available categories
+  const categories = [
+    { id: "sports", label: "Sports", slug: "General sports markets" },
+    { id: "soccer", label: "Soccer", slug: "Football/soccer leagues" },
+    { id: "nba", label: "NBA", slug: "Basketball markets" },
+    { id: "nfl", label: "NFL", slug: "American football" },
+    { id: "crypto", label: "Crypto", slug: "Cryptocurrency prices" },
+    { id: "politics", label: "Politics", slug: "Elections & policy" },
+    { id: "finance", label: "Finance", slug: "Stocks & economy" },
+    { id: "entertainment", label: "Entertainment", slug: "Movies, TV, awards" },
+    { id: "science", label: "Science", slug: "Research & discoveries" },
+    { id: "weather", label: "Weather", slug: "Climate events" },
+    { id: "esports", label: "Esports", slug: "Gaming competitions" },
+    { id: "adult", label: "Adult Content", slug: "18+ markets" },
+    { id: "violence", label: "Violence", slug: "Conflict & war" },
+    { id: "mma", label: "MMA/UFC", slug: "Combat sports" },
+  ]
 
   const handleChange = () => {
     setHasChanges(true)
@@ -119,20 +134,22 @@ export default function RiskPage() {
     setHasChanges(false)
   }
 
-  const addToWhitelist = () => {
-    if (newWhitelistItem.trim()) {
-      setWhitelistMarkets((prev) => [...prev, newWhitelistItem.trim()])
-      setNewWhitelistItem("")
-      handleChange()
-    }
+  const toggleWhitelistCategory = (categoryId: string) => {
+    setWhitelistCategories((prev) =>
+      prev.includes(categoryId)
+        ? prev.filter((id) => id !== categoryId)
+        : [...prev, categoryId]
+    )
+    handleChange()
   }
 
-  const addToBlacklist = () => {
-    if (newBlacklistItem.trim()) {
-      setBlacklistMarkets((prev) => [...prev, newBlacklistItem.trim()])
-      setNewBlacklistItem("")
-      handleChange()
-    }
+  const toggleBlacklistCategory = (categoryId: string) => {
+    setBlacklistCategories((prev) =>
+      prev.includes(categoryId)
+        ? prev.filter((id) => id !== categoryId)
+        : [...prev, categoryId]
+    )
+    handleChange()
   }
 
   return (
@@ -326,80 +343,101 @@ export default function RiskPage() {
               </SettingRow>
             </SettingsSection>
 
-            {/* Market Filters */}
-            <SettingsSection title="Market Whitelist">
+            {/* Market Category Filters - Full Width */}
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-4">
+            {/* Whitelist Categories */}
+            <SettingsSection title="Whitelist Categories">
               <div className="py-3">
-                <div className="flex flex-wrap gap-1.5 mb-2">
-                  {whitelistMarkets.length === 0 ? (
-                    <span className="text-[10px] text-muted-foreground">No whitelist (all markets allowed)</span>
-                  ) : (
-                    whitelistMarkets.map((market, i) => (
-                      <span
-                        key={i}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] bg-success/20 text-success rounded-sm"
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {categories.map((category) => {
+                    const isSelected = whitelistCategories.includes(category.id)
+                    const isBlacklisted = blacklistCategories.includes(category.id)
+                    return (
+                      <button
+                        key={category.id}
+                        onClick={() => !isBlacklisted && toggleWhitelistCategory(category.id)}
+                        disabled={isBlacklisted}
+                        className={cn(
+                          "flex items-start gap-2 p-2 rounded-sm border text-left transition-colors",
+                          isBlacklisted
+                            ? "opacity-40 cursor-not-allowed border-border/50 bg-muted/20"
+                            : isSelected
+                            ? "border-success/50 bg-success/10 hover:bg-success/15"
+                            : "border-border hover:border-border/80 hover:bg-muted/30"
+                        )}
                       >
-                        {market}
-                        <button
-                          onClick={() => {
-                            setWhitelistMarkets((prev) => prev.filter((_, idx) => idx !== i))
-                            handleChange()
-                          }}
-                          className="hover:text-success/70"
+                        <div
+                          className={cn(
+                            "w-3.5 h-3.5 mt-0.5 rounded-sm border flex-shrink-0 flex items-center justify-center",
+                            isSelected
+                              ? "bg-success border-success"
+                              : "border-muted-foreground/50"
+                          )}
                         >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </span>
-                    ))
-                  )}
+                          {isSelected && <Check className="w-2.5 h-2.5 text-success-foreground" />}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <span className="text-xs font-medium text-foreground block">{category.label}</span>
+                          <span className="text-[10px] text-muted-foreground block truncate">{category.slug}</span>
+                        </div>
+                      </button>
+                    )
+                  })}
                 </div>
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Add market..."
-                    value={newWhitelistItem}
-                    onChange={(e) => setNewWhitelistItem(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && addToWhitelist()}
-                    className="h-7 text-xs flex-1"
-                  />
-                  <Button variant="outline" size="sm" className="h-7" onClick={addToWhitelist}>
-                    <Plus className="w-3 h-3" />
-                  </Button>
-                </div>
+                <p className="text-[10px] text-muted-foreground mt-2">
+                  {whitelistCategories.length === 0
+                    ? "No whitelist set — all categories allowed"
+                    : `${whitelistCategories.length} categories whitelisted`}
+                </p>
               </div>
             </SettingsSection>
 
-            <SettingsSection title="Market Blacklist / Blocked Categories">
+            {/* Blacklist Categories */}
+            <SettingsSection title="Blacklist Categories">
               <div className="py-3">
-                <div className="flex flex-wrap gap-1.5 mb-2">
-                  {blacklistMarkets.map((market, i) => (
-                    <span
-                      key={i}
-                      className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] bg-destructive/20 text-destructive rounded-sm"
-                    >
-                      {market}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {categories.map((category) => {
+                    const isSelected = blacklistCategories.includes(category.id)
+                    const isWhitelisted = whitelistCategories.includes(category.id)
+                    return (
                       <button
-                        onClick={() => {
-                          setBlacklistMarkets((prev) => prev.filter((_, idx) => idx !== i))
-                          handleChange()
-                        }}
-                        className="hover:text-destructive/70"
+                        key={category.id}
+                        onClick={() => !isWhitelisted && toggleBlacklistCategory(category.id)}
+                        disabled={isWhitelisted}
+                        className={cn(
+                          "flex items-start gap-2 p-2 rounded-sm border text-left transition-colors",
+                          isWhitelisted
+                            ? "opacity-40 cursor-not-allowed border-border/50 bg-muted/20"
+                            : isSelected
+                            ? "border-destructive/50 bg-destructive/10 hover:bg-destructive/15"
+                            : "border-border hover:border-border/80 hover:bg-muted/30"
+                        )}
                       >
-                        <X className="w-3 h-3" />
+                        <div
+                          className={cn(
+                            "w-3.5 h-3.5 mt-0.5 rounded-sm border flex-shrink-0 flex items-center justify-center",
+                            isSelected
+                              ? "bg-destructive border-destructive"
+                              : "border-muted-foreground/50"
+                          )}
+                        >
+                          {isSelected && <X className="w-2.5 h-2.5 text-destructive-foreground" />}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <span className="text-xs font-medium text-foreground block">{category.label}</span>
+                          <span className="text-[10px] text-muted-foreground block truncate">{category.slug}</span>
+                        </div>
                       </button>
-                    </span>
-                  ))}
+                    )
+                  })}
                 </div>
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Add category..."
-                    value={newBlacklistItem}
-                    onChange={(e) => setNewBlacklistItem(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && addToBlacklist()}
-                    className="h-7 text-xs flex-1"
-                  />
-                  <Button variant="outline" size="sm" className="h-7" onClick={addToBlacklist}>
-                    <Plus className="w-3 h-3" />
-                  </Button>
-                </div>
+                <p className="text-[10px] text-muted-foreground mt-2">
+                  {blacklistCategories.length === 0
+                    ? "No blacklist set — no categories blocked"
+                    : `${blacklistCategories.length} categories blocked`}
+                </p>
               </div>
             </SettingsSection>
           </div>
